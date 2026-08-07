@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>jp.hayase.peerline42</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/hayase/.nvm/versions/node/v22.17.0/bin/node</string>
+    <string>/Users/hayase/08.個人開発/05.42同期ダッシュボード/node_modules/next/dist/bin/next</string>
+    <string>start</string>
+    <string>-H</string>
+    <string>127.0.0.1</string>
+    <string>-p</string>
+    <string>3002</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/hayase/08.個人開発/05.42同期ダッシュボード</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>NODE_ENV</key>
+    <string>production</string>
+    <key>PATH</key>
+    <string>/Users/hayase/.nvm/versions/node/v22.17.0/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/hayase/Library/Logs/peerline42.stdout.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/hayase/Library/Logs/peerline42.stderr.log</string>
+</dict>
+</plist>

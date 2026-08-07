@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+.env*
+!.env.example
+npm-debug.log*
+.DS_Store
+*.tsbuildinfo
+
+# パッチ適用時のバックアップ
+*.orig
+*.rej
+
+# ランタイムキャッシュ
+.cache/
