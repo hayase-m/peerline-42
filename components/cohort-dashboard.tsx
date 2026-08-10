@@ -42,10 +42,12 @@ const projectStatusLabels: Record<string, string> = {
 
 type FilterValue = 'all' | 'on-campus' | PeerStatus;
 type SortValue = 'level-desc' | 'level-asc' | 'login';
+export type DashboardTab = 'peers' | 'timeline';
 
 interface CohortDashboardProps {
   data: CohortDashboardData;
   demoMode: boolean;
+  initialTab: DashboardTab;
 }
 
 function medianLevel(peers: PeerSummary[]): number | null {
@@ -112,7 +114,9 @@ function projectMark(project: PeerProject): string {
 export function CohortDashboard({
   data,
   demoMode,
+  initialTab,
 }: CohortDashboardProps) {
+  const [tab, setTab] = useState<DashboardTab>(initialTab);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const [filter, setFilter] = useState<FilterValue>('all');
@@ -309,6 +313,26 @@ export function CohortDashboard({
     setDetail(null);
   }
 
+  // タブはURLにも反映しておき、リロードしても同じタブを開く。
+  function selectTab(next: DashboardTab) {
+    setTab(next);
+
+    const query = new URLSearchParams(window.location.search);
+
+    if (next === 'peers') {
+      query.delete('tab');
+    } else {
+      query.set('tab', next);
+    }
+
+    const search = query.toString();
+    window.history.replaceState(
+      null,
+      '',
+      '/dashboard' + (search ? '?' + search : ''),
+    );
+  }
+
   function openCohort(
     poolYear: string,
     poolMonth: string,
@@ -318,6 +342,10 @@ export function CohortDashboard({
       year: poolYear,
       month: poolMonth,
     });
+
+    if (tab !== 'peers') {
+      query.set('tab', tab);
+    }
 
     if (demoMode) {
       query.set('demo', '1');
@@ -395,30 +423,7 @@ export function CohortDashboard({
               <span className="cohort-note">自分の期以外を表示中</span>
             )}
           </p>
-        </div>
 
-        <div className="cohort-stats" aria-label="同期の概要">
-          <div>
-            <span>PEERS</span>
-            <strong>{data.peers.length}</strong>
-          </div>
-          <div>
-            <span>ON CAMPUS</span>
-            <strong>{onCampusCount}</strong>
-          </div>
-          <div>
-            <span>MEDIAN LV.</span>
-            <strong>{median?.toFixed(2) ?? '—'}</strong>
-          </div>
-        </div>
-      </section>
-
-      <section
-        className={
-          isSwitchingCohort ? 'cohort-board is-loading' : 'cohort-board'
-        }
-      >
-        <div className="board-toolbar">
           <div className="cohort-switch" aria-label="表示するPiscine">
             <label className="select-field cohort-year">
               <span className="sr-only">Piscineの年</span>
@@ -470,7 +475,52 @@ export function CohortDashboard({
               </button>
             )}
           </div>
+        </div>
 
+        <div className="cohort-stats" aria-label="同期の概要">
+          <div>
+            <span>PEERS</span>
+            <strong>{data.peers.length}</strong>
+          </div>
+          <div>
+            <span>ON CAMPUS</span>
+            <strong>{onCampusCount}</strong>
+          </div>
+          <div>
+            <span>MEDIAN LV.</span>
+            <strong>{median?.toFixed(2) ?? '—'}</strong>
+          </div>
+        </div>
+      </section>
+
+      <nav className="tab-switch" aria-label="表示の切り替え">
+        <button
+          className={tab === 'peers' ? 'is-active' : undefined}
+          type="button"
+          aria-current={tab === 'peers'}
+          onClick={() => selectTab('peers')}
+        >
+          同期一覧
+          <b>{data.peers.length}</b>
+        </button>
+        <button
+          className={tab === 'timeline' ? 'is-active' : undefined}
+          type="button"
+          aria-current={tab === 'timeline'}
+          onClick={() => selectTab('timeline')}
+        >
+          最近の提出
+          {timeline ? <b>{timeline.submissions.length}</b> : null}
+        </button>
+      </nav>
+
+      <section
+        className={
+          isSwitchingCohort ? 'cohort-board is-loading' : 'cohort-board'
+        }
+        hidden={tab !== 'peers'}
+      >
+        <div className="board-toolbar">
           <label className="search-field">
             <span className="sr-only">名前またはloginで検索</span>
             <span aria-hidden="true">⌕</span>
@@ -612,7 +662,7 @@ export function CohortDashboard({
         </footer>
       </section>
 
-      <section className="timeline-board">
+      <section className="timeline-board" hidden={tab !== 'timeline'}>
         <div className="timeline-heading">
           <div>
             <p className="section-label">Recent submissions</p>

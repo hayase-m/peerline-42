@@ -764,7 +764,7 @@ select {
 
 .cohort-board {
   width: min(1360px, calc(100% - 32px));
-  margin: 0 auto;
+  margin: 12px auto 0;
   padding: 18px;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -774,7 +774,7 @@ select {
 .board-toolbar {
   display: grid;
   gap: 10px;
-  grid-template-columns: auto minmax(200px, 1fr) auto auto;
+  grid-template-columns: minmax(200px, 1fr) auto auto;
   padding-bottom: 18px;
 }
 
@@ -782,6 +782,47 @@ select {
   display: flex;
   gap: 6px;
   align-items: stretch;
+  margin-top: 14px;
+}
+
+.tab-switch {
+  display: flex;
+  width: min(1360px, calc(100% - 32px));
+  gap: 4px;
+  margin: 0 auto;
+  padding: 3px;
+  background: var(--paper);
+}
+
+.tab-switch button {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.tab-switch button.is-active {
+  color: var(--surface);
+  background: var(--ink);
+}
+
+.tab-switch b {
+  padding: 1px 7px;
+  background: rgb(0 0 0 / 8%);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tab-switch button.is-active b {
+  background: rgb(255 255 255 / 18%);
 }
 
 .cohort-switch .cohort-year select {
@@ -1309,7 +1350,7 @@ select {
 
 .timeline-board {
   width: min(1360px, calc(100% - 32px));
-  margin: 22px auto 40px;
+  margin: 12px auto 40px;
   padding: 18px;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1682,7 +1723,6 @@ select {
     grid-template-columns: 1fr 1fr;
   }
 
-  .cohort-switch,
   .search-field {
     grid-column: 1 / -1;
   }

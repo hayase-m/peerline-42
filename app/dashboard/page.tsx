@@ -1,5 +1,8 @@
 import { redirect } from 'next/navigation';
-import { CohortDashboard } from '@/components/cohort-dashboard';
+import {
+  CohortDashboard,
+  type DashboardTab,
+} from '@/components/cohort-dashboard';
 import { clearCohortCache, getCohortDashboard } from '@/lib/cohort';
 import { demoDashboard } from '@/lib/demo-data';
 import { FortyTwoApiError } from '@/lib/forty-two-api';
@@ -15,6 +18,7 @@ interface DashboardPageProps {
     month?: string;
     demo?: string;
     refresh?: string;
+    tab?: string;
   }>;
 }
 
@@ -39,9 +43,16 @@ export default async function DashboardPage({
   const poolYear = normalizePoolYear(params.year);
   const poolMonth = normalizePoolMonth(params.month);
   const demoMode = params.demo === '1';
+  const tab: DashboardTab = params.tab === 'timeline' ? 'timeline' : 'peers';
 
   if (demoMode) {
-    return <CohortDashboard data={getDemoData(poolYear, poolMonth)} demoMode />;
+    return (
+      <CohortDashboard
+        data={getDemoData(poolYear, poolMonth)}
+        demoMode
+        initialTab={tab}
+      />
+    );
   }
 
   const session = await readSession();
@@ -110,5 +121,7 @@ export default async function DashboardPage({
     );
   }
 
-  return <CohortDashboard data={data} demoMode={false} />;
+  return (
+    <CohortDashboard data={data} demoMode={false} initialTab={tab} />
+  );
 }
