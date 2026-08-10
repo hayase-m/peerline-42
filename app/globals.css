@@ -1305,6 +1305,118 @@ select {
   border-left-color: var(--aqua);
 }
 
+/* Timeline */
+
+.timeline-board {
+  width: min(1360px, calc(100% - 32px));
+  margin: 22px auto 40px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.timeline-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+}
+
+.timeline-heading h2 {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.timeline-heading > span {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.timeline-day h3 {
+  margin: 0;
+  padding: 12px 14px 8px;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--line);
+}
+
+.timeline-row {
+  display: grid;
+  width: 100%;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  grid-template-columns: 56px 1fr auto;
+  text-align: left;
+  cursor: pointer;
+}
+
+.timeline-row:hover {
+  background: var(--paper);
+}
+
+.timeline-time {
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.timeline-identity strong {
+  display: block;
+  font-size: 13px;
+}
+
+.timeline-identity small {
+  display: block;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-mark {
+  min-width: 44px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.timeline-mark.is-failed {
+  color: var(--coral);
+}
+
+@media (max-width: 720px) {
+  .timeline-board {
+    width: calc(100% - 16px);
+    padding: 9px;
+  }
+
+  .timeline-row {
+    gap: 10px;
+    grid-template-columns: 46px 1fr auto;
+  }
+}
+
 /* Loading */
 
 .dashboard-loading {

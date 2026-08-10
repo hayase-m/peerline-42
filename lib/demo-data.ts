@@ -1,5 +1,6 @@
 import type {
   CohortDashboardData,
+  CohortTimeline,
   PeerDetail,
   PeerStatus,
 } from '@/lib/forty-two-types';
@@ -148,6 +149,33 @@ export const demoDashboard: CohortDashboardData = {
     beginAt: peer.level === null ? null : '2024-10-07T00:00:00.000Z',
   })),
   generatedAt: '2026-08-03T05:00:00.000Z',
+};
+
+const demoSubmissions: Array<[string, string, string, number]> = [
+  ['saito', 'Inception', '2026-08-03T10:24:00.000Z', 100],
+  ['inoue', 'CPP Module 04', '2026-08-03T07:05:00.000Z', 80],
+  ['kato', 'minishell', '2026-08-02T12:40:00.000Z', 100],
+  ['mori', 'Philosophers', '2026-08-02T09:10:00.000Z', 0],
+  ['fujita', 'NetPractice', '2026-08-01T15:32:00.000Z', 100],
+  ['chiba', 'push_swap', '2026-08-01T11:18:00.000Z', 84],
+];
+
+export const demoTimeline: CohortTimeline = {
+  since: '2026-07-04T00:00:00.000Z',
+  submissions: demoSubmissions.map(([login, project, markedAt, mark], index) => {
+    const peer = demoDashboard.peers.find((item) => item.login === login);
+
+    return {
+      id: index + 1,
+      login,
+      name: peer?.name ?? login,
+      image: null,
+      project,
+      finalMark: mark,
+      validated: mark >= 80,
+      markedAt,
+    };
+  }),
 };
 
 export function getDemoPeerDetail(login: string): PeerDetail {

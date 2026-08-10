@@ -1,5 +1,6 @@
 import type {
   FortyTwoCursusUser,
+  FortyTwoProjectUser,
   FortyTwoUser,
 } from '@/lib/forty-two-types';
 
@@ -251,6 +252,44 @@ export async function getCursusUsers(
           'page[size]': 100,
         },
       ).then((page) => page.data),
+    ),
+  );
+
+  return pages.flat();
+}
+
+// 指定期間に採点されたプロジェクトを、ユーザーIDをまとめて絞り込んで取る。
+// レスポンスにuser(login)が入るので、ユーザーごとの追加取得は不要。
+export async function getProjectSubmissions(
+  accessToken: string,
+  cursusId: number,
+  userIds: number[],
+  since: Date,
+): Promise<FortyTwoProjectUser[]> {
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const range = since.toISOString() + ',' + new Date().toISOString();
+  const chunks: number[][] = [];
+
+  for (let index = 0; index < userIds.length; index += 100) {
+    chunks.push(userIds.slice(index, index + 100));
+  }
+
+  const pages = await Promise.all(
+    chunks.map((chunk) =>
+      fetchAllFortyTwo<FortyTwoProjectUser>(
+        '/v2/projects_users',
+        accessToken,
+        {
+          'filter[user_id]': chunk.join(','),
+          'filter[cursus]': cursusId,
+          'range[marked_at]': range,
+          sort: '-marked_at',
+        },
+        5,
+      ),
     ),
   );
 

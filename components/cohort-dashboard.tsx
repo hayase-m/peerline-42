@@ -12,9 +12,11 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/avatar';
-import { getDemoPeerDetail } from '@/lib/demo-data';
+import { getDemoPeerDetail, demoTimeline } from '@/lib/demo-data';
 import type {
   CohortDashboardData,
+  CohortSubmission,
+  CohortTimeline,
   PeerDetail,
   PeerProject,
   PeerStatus,
@@ -71,6 +73,34 @@ function formatUpdatedAt(value: string): string {
   }).format(new Date(value));
 }
 
+function formatTimelineDay(value: string): string {
+  return new Intl.DateTimeFormat('ja-JP', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(new Date(value));
+}
+
+function formatTimelineTime(value: string): string {
+  return new Intl.DateTimeFormat('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function groupByDay(
+  submissions: CohortSubmission[],
+): Array<[string, CohortSubmission[]]> {
+  const groups = new Map<string, CohortSubmission[]>();
+
+  for (const submission of submissions) {
+    const day = submission.markedAt.slice(0, 10);
+    groups.set(day, [...(groups.get(day) ?? []), submission]);
+  }
+
+  return [...groups.entries()];
+}
+
 function projectMark(project: PeerProject): string {
   if (project.finalMark !== null) {
     return String(project.finalMark);
@@ -94,6 +124,11 @@ export function CohortDashboard({
   const requestSequence = useRef(0);
   const router = useRouter();
   const [isSwitchingCohort, startCohortTransition] = useTransition();
+  const [timelineState, setTimelineState] = useState<{
+    key: string;
+    data: CohortTimeline | null;
+    error: string | null;
+  } | null>(null);
 
   const maxLevel = useMemo(
     () =>
@@ -135,6 +170,75 @@ export function CohortDashboard({
           : leftLevel - rightLevel;
       });
   }, [data.peers, deferredQuery, filter, sort]);
+
+  const poolYear = data.cohort.poolYear;
+  const poolMonthValue = data.cohort.poolMonth;
+  const timelineKey = poolYear + ':' + poolMonthValue;
+
+  // 一覧の表示を待たせないよう、提出履歴は描画後に取得する。
+  useEffect(() => {
+    if (demoMode) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const [year, month] = timelineKey.split(':');
+
+    fetch(
+      '/api/timeline?year=' +
+        encodeURIComponent(year) +
+        '&month=' +
+        encodeURIComponent(month),
+      { signal: controller.signal },
+    )
+      .then(async (response) => {
+        const body = (await response.json()) as
+          | CohortTimeline
+          | { message?: string };
+
+        if (!response.ok) {
+          throw new Error(
+            'message' in body && body.message
+              ? body.message
+              : '提出履歴を取得できませんでした。',
+          );
+        }
+
+        setTimelineState({
+          key: timelineKey,
+          data: body as CohortTimeline,
+          error: null,
+        });
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name === 'AbortError') {
+          return;
+        }
+
+        setTimelineState({
+          key: timelineKey,
+          data: null,
+          error:
+            error instanceof Error
+              ? error.message
+              : '提出履歴を取得できませんでした。',
+        });
+      });
+
+    return () => controller.abort();
+  }, [demoMode, timelineKey]);
+
+  const isTimelineReady =
+    demoMode || timelineState?.key === timelineKey;
+  const timeline = demoMode
+    ? demoTimeline
+    : isTimelineReady
+      ? (timelineState?.data ?? null)
+      : null;
+  const timelineError = isTimelineReady
+    ? (timelineState?.error ?? null)
+    : null;
+  const isLoadingTimeline = !isTimelineReady;
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -506,6 +610,78 @@ export function CohortDashboard({
             )}
           </span>
         </footer>
+      </section>
+
+      <section className="timeline-board">
+        <div className="timeline-heading">
+          <div>
+            <p className="section-label">Recent submissions</p>
+            <h2>最近の提出</h2>
+          </div>
+          <span>直近30日・採点済み</span>
+        </div>
+
+        {isLoadingTimeline ? (
+          <div className="project-loading" aria-live="polite">
+            <i />
+            <span>提出履歴を取得中</span>
+          </div>
+        ) : null}
+
+        {timelineError ? (
+          <p className="detail-error" role="alert">
+            {timelineError}
+          </p>
+        ) : null}
+
+        {timeline && timeline.submissions.length === 0 ? (
+          <div className="empty-state">
+            <strong>直近30日の提出はありません</strong>
+            <p>別の期を選ぶと、その期の提出履歴を表示します。</p>
+          </div>
+        ) : null}
+
+        {timeline
+          ? groupByDay(timeline.submissions).map(([day, items]) => (
+              <div className="timeline-day" key={day}>
+                <h3>{formatTimelineDay(items[0].markedAt)}</h3>
+                {items.map((item) => {
+                  const peer = data.peers.find(
+                    (candidate) => candidate.login === item.login,
+                  );
+
+                  return (
+                    <button
+                      className="timeline-row"
+                      key={item.id}
+                      type="button"
+                      onClick={() => (peer ? openPeer(peer) : undefined)}
+                    >
+                      <span className="timeline-time">
+                        {formatTimelineTime(item.markedAt)}
+                      </span>
+                      <span className="timeline-identity">
+                        <Avatar image={item.image} name={item.name} />
+                        <span>
+                          <strong>{item.login}</strong>
+                          <small>{item.project}</small>
+                        </span>
+                      </span>
+                      <span
+                        className={
+                          item.validated === false
+                            ? 'timeline-mark is-failed'
+                            : 'timeline-mark'
+                        }
+                      >
+                        {item.finalMark === null ? '—' : item.finalMark}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))
+          : null}
       </section>
 
       {selectedPeer ? (

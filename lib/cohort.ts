@@ -2,10 +2,12 @@ import {
   fetchAllFortyTwo,
   getCurrentUser,
   getCursusUsers,
+  getProjectSubmissions,
   getUser,
 } from '@/lib/forty-two-api';
 import type {
   CohortDashboardData,
+  CohortTimeline,
   FortyTwoCursusUser,
   FortyTwoUser,
   PeerDetail,
@@ -187,10 +189,24 @@ export function clearCohortCache(): void {
   cacheStore.clear();
 }
 
-export async function getCohortDashboard(
+interface ResolvedCohort {
+  viewer: FortyTwoUser;
+  viewerPoolYear: string;
+  viewerPoolMonth: string;
+  poolYear: string;
+  poolMonth: string;
+  primaryCampus: { id: number | null; name: string };
+  coreCursus: FortyTwoCursusUser | null;
+  monthOptions: PoolMonthOption[];
+  users: FortyTwoUser[];
+  cursusUsers: FortyTwoCursusUser[];
+  fetchedAt: string;
+}
+
+async function resolveCohort(
   accessToken: string,
   requestedPool: Partial<CohortPool> | null,
-): Promise<CohortDashboardData> {
+): Promise<ResolvedCohort> {
   const viewer = await cached('viewer', VIEWER_TTL_MS, () =>
     getCurrentUser(accessToken),
   );
@@ -253,6 +269,39 @@ export async function getCohortDashboard(
           ),
       )
     : [];
+
+  return {
+    viewer,
+    viewerPoolYear,
+    viewerPoolMonth,
+    poolYear,
+    poolMonth,
+    primaryCampus,
+    coreCursus,
+    monthOptions,
+    users,
+    cursusUsers,
+    fetchedAt: yearSnapshot.fetchedAt,
+  };
+}
+
+export async function getCohortDashboard(
+  accessToken: string,
+  requestedPool: Partial<CohortPool> | null,
+): Promise<CohortDashboardData> {
+  const {
+    viewer,
+    viewerPoolYear,
+    viewerPoolMonth,
+    poolYear,
+    poolMonth,
+    primaryCampus,
+    coreCursus,
+    monthOptions,
+    users,
+    cursusUsers,
+    fetchedAt,
+  } = await resolveCohort(accessToken, requestedPool);
   const cursusByUser = new Map(
     cursusUsers.map((item) => [item.user.id, item]),
   );
@@ -292,7 +341,92 @@ export async function getCohortDashboard(
         beginAt: cursusUser?.begin_at ?? null,
       };
     }),
-    generatedAt: yearSnapshot.fetchedAt,
+    generatedAt: fetchedAt,
+  };
+}
+
+const TIMELINE_TTL_MS = 5 * 60 * 1000;
+const TIMELINE_WINDOW_DAYS = 30;
+const TIMELINE_LIMIT = 60;
+// cursusが閉じられると、進行中だった課題が同じ時刻に一括で0点になる。
+// 提出の記録ではないのでタイムラインからは除く。
+const CURSUS_CLOSE_MARGIN_MS = 5 * 60 * 1000;
+
+export async function getCohortTimeline(
+  accessToken: string,
+  requestedPool: Partial<CohortPool> | null,
+): Promise<CohortTimeline> {
+  const { poolYear, poolMonth, primaryCampus, coreCursus, users, cursusUsers } =
+    await resolveCohort(accessToken, requestedPool);
+  const since = new Date(
+    Date.now() - TIMELINE_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  );
+
+  if (!coreCursus) {
+    return { since: since.toISOString(), submissions: [] };
+  }
+
+  const submissions = await cached(
+    'timeline:' +
+      coreCursus.cursus_id +
+      ':' +
+      primaryCampus.id +
+      ':' +
+      poolYear +
+      ':' +
+      poolMonth,
+    TIMELINE_TTL_MS,
+    () =>
+      getProjectSubmissions(
+        accessToken,
+        coreCursus.cursus_id,
+        users.map((user) => user.id),
+        since,
+      ),
+  );
+
+  const userById = new Map(users.map((user) => [user.id, user]));
+  const closedAtByUser = new Map(
+    cursusUsers.flatMap((item) =>
+      item.end_at ? [[item.user.id, Date.parse(item.end_at)] as const] : [],
+    ),
+  );
+
+  return {
+    since: since.toISOString(),
+    submissions: submissions
+      .flatMap((item) => {
+        const user = item.user ? userById.get(item.user.id) : undefined;
+        const markedAt = item.marked_at ? Date.parse(item.marked_at) : NaN;
+
+        if (!user || !item.marked_at || !Number.isFinite(markedAt)) {
+          return [];
+        }
+
+        const closedAt = closedAtByUser.get(user.id);
+
+        if (
+          closedAt !== undefined &&
+          Math.abs(closedAt - markedAt) < CURSUS_CLOSE_MARGIN_MS
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            id: item.id,
+            login: user.login,
+            name: user.usual_full_name ?? user.displayname,
+            image: userImage(user),
+            project: item.project.name,
+            finalMark: item.final_mark,
+            validated: item['validated?'] ?? null,
+            markedAt: item.marked_at,
+          },
+        ];
+      })
+      .sort((left, right) => right.markedAt.localeCompare(left.markedAt))
+      .slice(0, TIMELINE_LIMIT),
   };
 }
 

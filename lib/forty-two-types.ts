@@ -65,6 +65,7 @@ export interface FortyTwoProjectUser {
   created_at?: string;
   updated_at?: string;
   marked_at?: string | null;
+  user?: FortyTwoUserRef;
 }
 
 export interface FortyTwoUser {
@@ -130,6 +131,22 @@ export interface CohortDashboardData {
   };
   peers: PeerSummary[];
   generatedAt: string;
+}
+
+export interface CohortSubmission {
+  id: number;
+  login: string;
+  name: string;
+  image: string | null;
+  project: string;
+  finalMark: number | null;
+  validated: boolean | null;
+  markedAt: string;
+}
+
+export interface CohortTimeline {
+  since: string;
+  submissions: CohortSubmission[];
 }
 
 export interface PeerProject {
